@@ -1,0 +1,5 @@
+2021/03/23-21:04:11.962 378c Reusing MANIFEST C:\Users\dougl\Projects\nojs\bot_js\cache\Default\IndexedDB\https_1000b044d0b6d0d60a369bf431ec9c60.safeframe.googlesyndication.com_0.indexeddb.leveldb/MANIFEST-000001
+2021/03/23-21:04:15.135 18e4 Level-0 table #5: started
+2021/03/23-21:04:15.141 18e4 Level-0 table #5: 439 bytes OK
+2021/03/23-21:04:15.142 18e4 Delete type=0 #3
+2021/03/23-21:04:15.143 18e4 Manual compaction at level-0 from (begin) .. (end); will stop at (end)

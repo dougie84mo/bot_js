@@ -2,7 +2,7 @@
   "name": "bot_js",
   "version": "1.0.0",
   "description": "Node project for boting specialty items and monitors",
-  "main": "app.js",
+  "main": "odin.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -25,10 +25,14 @@
   "homepage": "https://github.com/dougie84mo/bot_js#readme",
   "dependencies": {
     "axios": "^0.21.1",
+    "cheerio": "^1.0.0-rc.5",
     "electron": "^11.2.1",
     "prompt-sync": "^4.2.0",
+    "puppeteer": "^7.1.0",
+    "puppeteer-proxy": "^2.1.1",
     "readline": "^1.3.0",
     "request": "^2.88.2",
-    "superagent": "^6.1.0"
+    "superagent": "^6.1.0",
+    "webhook-discord": "^3.7.7"
   }
 }
