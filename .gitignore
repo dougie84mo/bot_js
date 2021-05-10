@@ -1,4 +1,5 @@
 .idea/
-assets/
+assets/**
 private/
 node_modules/
+.env
