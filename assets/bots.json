@@ -7,14 +7,27 @@
       "webhook": "https://discordapp.com/api/webhooks/783505390213922836/-7ihmEGjVR1FcJd_o1MmrzERtrmxi2jVPHOMiJ7tD3FwgFcJe-LSiOynpYGv5DktRAYj"
     },
     "product_ids": [6439402, 6429440, 6441172, 6437909],
-    "product_sets": {
-      "graphics_cards": [6439402, 6429440, 6441172, 6437909],
-      "consoles": [6426149, 6430161, 6430277]
-    },
     "product_id_type": "sku_api",
     "api_token": "rwstjfgGb9GwAXRPkKi5OW40",
     "delays": {"daily": 50000},
     "task_count": 1
+  },
+  "Amazon": {
+    "monitor_api_type": 0,
+    "is_prod": true,
+    "paths": {
+      "webhook": "https://discord.com/api/webhooks/822318309042683924/3twA5Q6am9Q9-NfGLrjMhdjg4Axxu-lsKViRjU6Nlzdx0_ohdniwR7ZDyWQBDRN0lHux",
+      "product_url": "https://www.amazon.com/dp/%X?ref_=ast_sto_dp"
+    },
+    "purchase_if_found": true,
+    "product_id_type": "id",
+    "carting_type": "object_callback",
+    "product_ids": ["B07CPS16L4","B08FC5L3RG","B08J5F3G18"],
+    "product_test": ["B08DHFX4FV","B07CPS16L4","B08J5F3G18","B08FC6MR62","B08FC5L3RG"],
+    "accounts": [
+      {"username": "dougiefresh1513@gmail.com", "password": "B0n35ies"},
+      {"username": "douglasrich9215@gmail.com", "password": "Photohyponasty58-glowworm67"}
+    ]
   },
   "Tesla": {
     "monitor_api_type": 0,
@@ -28,18 +41,22 @@
     "selector": "#page--product-details > main > div.page > div > section > div.mobile-view > div > div.product__info > div.product__container__details > section > div.product__container__details__buynow.active > input.btn-outOfStock.tds-btn.tds-btn--blue.tds-btn--full.product__container__details__submit__buy.tds--is_hidden",
     "product_id_type": "slug_sku",
     "product_ids": [
-      ["tesla-tequila", "1617866-00-A"],
-      ["desktop-supercharger", "8756722-00-A"]
+      "tesla-tequila___1617866-00-A",
+      "desktop-supercharger___8756722-00-A"
     ]
   },
-  "PokemonCenter": {
-    "monitor_api_type": 0,
+  "EVGA": {
     "is_prod": false,
-    "product_id_type": "url",
-    "product_ids": [""]
+    "paths": {
+      "in_stock_url": "https://www.evga.com/products/feature.aspx"
+    }
   },
   "Nvidia": {
     "monitor_api_type": 0,
+    "paths": {
+      "product": "https://shop.nvidia.com/en-us/geforce/store/gpu/?page=1&limit=9&locale=en-us&category=GPU&gpu=RTX%203070,RTX%203090,RTX%203080,RTX%203060%20TI,RTX%203060&gpu_filter=RTX%203090~16,RTX%203080~16,RTX%203070~22,RTX%203060%20TI~19,RTX%203060~16,RTX%202080%20SUPER~0,RTX%202080~0,RTX%202070%20SUPER~0,RTX%202070~0,RTX%202060~0,GTX%201660%20TI~0,GTX%201660~0,GTX%201650%20TI~0,GTX%201650~0"
+    },
+    "dynamic_urls": {},
     "is_prod": false,
     "product_id_type": "url",
     "product_ids": [""]
@@ -54,24 +71,10 @@
     "is_prod": false,
     "product_ids": [""]
   },
-  "Amazon": {
+  "PokemonCenter": {
     "monitor_api_type": 0,
-    "is_prod": true,
-    "paths": {
-      "webhook": "https://discord.com/api/webhooks/822318309042683924/3twA5Q6am9Q9-NfGLrjMhdjg4Axxu-lsKViRjU6Nlzdx0_ohdniwR7ZDyWQBDRN0lHux",
-      "product_url": "https://www.amazon.com/dp/%X?ref_=ast_sto_dp"
-    },
-    "purchase_if_found": true,
-    "product_id_type": "id",
-    "carting_type": "object_callback",
-    "product_ids": [
-      {"id": "B08HR9D2JS", "keywords": "3090", "plower": "1000"},
-      {"id": "B08P2H5LW2", "keywords": "3060", "plower": "1000"},
-      {"id": "B08FC6MR62", "keywords": "playstion;5;digital", "plower": "450"}
-    ],
-    "accounts": [
-      {"username": "dougiefresh1513@gmail.com", "password": "B0n35ies"},
-      {"username": "douglasrich9215@gmail.com", "password": "Photohyponasty58-glowworm67"}
-    ]
+    "is_prod": false,
+    "product_id_type": "url",
+    "product_ids": [""]
   }
 }

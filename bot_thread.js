@@ -1,54 +1,40 @@
 const webhook = require('webhook-discord');
 const axios = require('axios');
-const path = require('path');
-const fs = require('fs');
+const {timestamp, bots, proxies, env} = require('./lib/config');
 
-const puppeteer = require('puppeteer');
-const { proxyRequest } = require('puppeteer-proxy')
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+
+// const { proxyRequest } = require('puppeteer-proxy');
 const http = require('http');
-const { parentPort } = require('worker_threads');
+const { Worker } = require('worker_threads');
 
 
 
 class Productivity {
 
-    static initialize_configuration() {
-        const current_asset_path = path.join(__dirname, 'assets');
-        const asset_files = fs.readdirSync(current_asset_path);
-        console.log("Stack starting with files " + asset_files.join(" - "));
-        let opts = {};
-
-        for (let file of asset_files) {
-            let filetype = file.includes('txt') ? '.txt' : (file.includes('csv') ? '.csv' : '.json');
-            if (file.includes('txt')) {
-                let data = fs.readFileSync(`.\\assets\\${file}`,{encoding:'utf8'});
-                let actual_proxy_data = [];
-                data = data.toString().split("\n");
-                for (let prox in data) {
-                    let proxy = data[prox].replace('\r', '').split(':')
-                    let proxy_info= {
-                        'proxy_server': proxy[0]+':'+proxy[1],
-                        'user_pass': proxy[2]+":"+proxy[3],
-                        'ip': proxy[0],
-                        'port': proxy[1],
-                        'username': proxy[2],
-                        'password': proxy[3],
-                    };
-
-                    proxy_info['whole'] = proxy_info['user_pass']+'@'+proxy_info['proxy_server'];
-                    // console.log(proxy_info);
-                    actual_proxy_data.push(proxy_info);
-                    // console.log(actual_proxy);
-                }
-                // console.log('Using proxies', actual_proxy_data);
-                opts[file.replace('.txt', '')] = actual_proxy_data;
-
-            } else if (file.includes('json')) {
-
-                opts[file.replace('.json', '')] = require(`.\\assets\\${file}`);
-            }
+    static ts(timestamp=null) {return timestamp===null ? new Date().getTime() : (new Date().getTime()-timestamp)/1000;}
+    static random_int_between(min, max) {return Math.floor(Math.random() * (max - min + 1) + min)}
+    static random_int_exclusive_between(min, max) {return Math.floor(Math.random() * (max - min) + min)}
+    static random_int_number(n) {
+        // 12 is the min safe number Math.random() can generate without it starting to pad the end with zeros.
+        let add = 1, max = 12 - add;
+        if ( n > max ) {
+            return Productivity.random_int_number(max) + Productivity.random_int_number(n - max);
         }
-        return opts;
+        max        = Math.pow(10, n+add);
+        let min    = max/10; // Math.pow(10, n) basically
+        let number = Productivity.random_int_between(min, max);
+        return ("" + number).substring(add);
+    }
+
+    static generate_worker(file, workData, error = null) {
+        const port = new Worker(require.resolve(file), {workerData: workData,});
+        if (error !== null) {
+            // Set port events if applicable
+            port.on("error", (e) => console.error(e));
+        }
+        return port;
     }
 
     static delay_math(delays, multiplier) {
@@ -69,47 +55,26 @@ class Productivity {
 
     static format_url(url_str, params) {
         for (let i = 0; i < params.length; i++) {
-            // const ph = `%${placeholders[i]}`;
             url_str = url_str.replace("%X", params[i]);
         }
         return url_str;
     }
 
-}
-
-class BaseMonitor {
-
-    conf = null;
-    bconf = null;
-    item_id = null;
-    monitor_counter=0;
-
-    constructor(bot_args) {
-        this.conf = bot_args['config'];
-        this.bconf = bot_args['bot'];
-        this.product_type = this.bconf["product_id_type"].split('_');
-        this.item_id = bot_args["pid"];
-        this.delay = bot_args["delay"];
-        this.bot_args = bot_args;
-        if (this.bconf.hasOwnProperty("paths") && this.bconf["paths"].hasOwnProperty("webhook")) {
-            this.hook = new Discorder(this.bconf["paths"]["webhook"]);
-        }
-    }
-
-    async browser_init(callback, viewport=null,  args=[]) {
-        // '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
-        let proxy_id = this.bot_args['prod_num'];
-        console.log(proxy_id);
-        let proxy_length = this.conf['proxies'].length;
+    static proxy_id(proxy_num, proxy_list) {
+        let proxy_id = proxy_num;
+        proxy_id--;
+        // Minus one to find the correct key of the proxy array
+        // Using the proxy length, if the proxy number is still greater than the proxy array length, then keep subtracting the length of the array until a valid key is set
+        let proxy_length = proxy_list.length;
         if (proxy_id > proxy_length) {
             while (proxy_id > proxy_length) {
-                proxy_id = proxy_id-proxy_length;
+                proxy_id = proxy_id - proxy_length;
             }
         }
-        proxy_id--;
-        console.log(proxy_id);
-        let proxy = proxy_id < 0 || proxy_id > proxy_length ? null : this.conf['proxies'][proxy_id];
-        console.log(proxy);
+        return proxy_id < 0 || proxy_id > proxy_length ? null : proxy_list[proxy_id];
+    }
+
+    static async browser_init(callback=null, headless=false, proxy=null) {
         let proxy_name = proxy === null ? '127.0.0.1:9876' : proxy['proxy_server'];
         let alwaysArgs = [
             '--no-sandbox',
@@ -127,48 +92,85 @@ class BaseMonitor {
             '--lang=en-US,en;q=0.9',
             '--ignore-certificate-errors'
         ];
-        let is_headless = this.is_prod();
-
         let options = {
-            headless: is_headless,
+            headless: headless,
             ignoreHTTPSErrors: true,
-            defaultViewport: viewport,
-            args: [].concat(args, alwaysArgs),
+            defaultViewport: null,
+            args: alwaysArgs,
         };
-        const browser = await puppeteer.launch(options);
-        const page = await browser.newPage();
         if (proxy) {
-            let username = proxy['username'];
-            let password = proxy['password'];
-            await page.authenticate({username, password})
+            // TODO: Apply puppeteer stealth config and auto captcha where necessary
+
+            await puppeteer.use(StealthPlugin());
         }
-        if (this.is_debug()) {
-            await page.goto('https://whatismyipaddress.com/');
-            await sleep(3);
+        const browser = await puppeteer.launch(options);
+        if (callback === null) {
+            return browser;
+        } else {
+            const page = await browser.newPage();
+            if (proxy) {
+                let username = proxy['username'];
+                let password = proxy['password'];
+                await page.authenticate({username, password})
+            }
+            // console.log('Run callable');
+            await callback(page);
+            // console.log('Callable ran');
+            await sleep(60);
+            await browser.close();
         }
-        await callback(page);
-        await sleep(60);
-        await browser.close();
-        // if (product) {
-        //     options['product'] = 'firefox';
-        // }
-        // console.log(options);
-        // if (proxy) {
-        //     await page.setRequestInterception(true);
-        //     let proxy_name = `http://${proxy['whole']}`;
-        //     await page.on('request', (request) => {
-        //         proxyRequest({page, proxyUrl: proxy_name, request});
-        //     });
-        // }
     }
+}
+
+class Thor {
+
+    _bots = null;
+    _timestamp = null;
+    _proxies = null;
+
+    constructor(bot_args) {
+        this._bots = bots;
+        this._timestamp = timestamp;
+        this._proxies = proxies;
+        this.bot_name = bot_args['lc_bot']
+        this.bot_args = bot_args;
+    }
+
+    is_debug() {return env.id <= 0;}
+    is_prod() {return !this.is_debug();}
+    ts() {return Productivity.ts(this._timestamp);}
+}
+
+class BaseMonitor extends Thor {
+
+    item_id = null;
+    monitor_counter=0;
+
+    constructor(bot_args) {
+        super(bot_args);
+        console.log(this);
+        // this.product_type = this._bots["product_id_type"].split('_');
+        this.item_id = bot_args["pid"].split("___");
+        this.delay = bot_args["delay"];
+        if (this._bots.hasOwnProperty("paths") && this._bots["paths"].hasOwnProperty("webhook")) {
+            this.hook = new Discorder(this._bots["paths"]["webhook"]);
+        }
+    }
+
+    async browser_init(callback=null, enable_recaptcha=false) {
+        // Proxy id starts as the bot product number
+        let proxy_id = this.bot_args['prod_num'];
+        let proxy = Productivity.proxy_id(proxy_id, this.conf['proxies'])
+        let is_headless = this.is_prod();
+        await Productivity.browser_init(callback, is_headless, proxy);
+    }
+
 
     get_item_id() {
         return typeof(this.item_id) === 'object' && this.item_id.hasOwnProperty('id') ? this.item_id.id : this.item_id;
     }
 
-    get_timestamp() {
-        return gen_timestamp(this.bot_args["timestamp"]);
-    }
+
 
     rnum(multiplier=1, integer=true) {
         let num = Math.random() * multiplier;
@@ -176,7 +178,7 @@ class BaseMonitor {
     }
 
     run_init() {
-        console.log(`Awaited bot ${this.get_item_id()} in ${this.get_timestamp()} seconds`);
+        // console.log(`Awaited product ${this.get_item_id()} in ${this.get_timestamp()} seconds`);
         this.run();
     }
 
@@ -202,20 +204,38 @@ class BaseMonitor {
     }
 
     generate_product_url(params) {
-        const url_str = this.bconf["paths"]["product_url"]
-        return Promise.resolve(url_str);
+        return new Promise(resolve => {
+            const url_str = Productivity.format_url(
+                this._bots["paths"]["product_url"],
+                params
+            );
+            resolve(url_str);
+        })
     }
 
+    async carting_callback() {/* get accounts or*/}
 
 
-    is_debug() {return this.conf["opts"]["debug"];}
-    is_prod() {return !this.is_debug();}
+    get item_id() {return this.item_id;}
+    product_url(merge_arr=[]) {return this.generate_product_url([].concat([this.item_id[0]], merge_arr));}
 
-    async carting_callback() {
-        // get accounts or
-    }
+
 
 }
+
+class BaseBotTask extends Thor {
+    constructor(bot_args) {
+        super(bot_args);
+        this.account = bot_args['account'];
+        this.product_url = bot_args['product_url'];
+        this.proxy = bot_args['proxies'];
+    }
+
+    async run_init() {
+        await Productivity.browser_init(this.proxy, null, this.run);
+    }
+}
+
 
 
 
@@ -245,10 +265,7 @@ class Discorder {
 }
 
 //
-class Loki {
-    constructor() {
-    }
-}
+
 
 
 // remember to call asynchronously
@@ -256,14 +273,14 @@ function sleep(seconds) {
     return new Promise(resolve => setTimeout(resolve, seconds*1000));
 }
 
-function gen_timestamp(timestamp) {
-    return (new Date().getTime()-timestamp)/1000;
-}
+
 
 module.exports = {
-    Productivity: Productivity,
+    Pro: Productivity,
+    Thor: Thor,
     Discorder: Discorder,
     BaseMonitor: BaseMonitor,
+    BaseBotTask: BaseBotTask,
     sleep,
     gen_timestamp
 };

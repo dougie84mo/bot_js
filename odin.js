@@ -1,49 +1,43 @@
 // const { exit } = require('process');
 // const cluster = require('cluster');
-const { Worker, workerData, isMainThread } = require('worker_threads');
-const { Productivity, gen_timestamp} = require('./bot_thread');
+import { Worker } from "worker_threads";
 
-const config = Productivity.initialize_configuration();
-const bot_keys = Object.keys(config["bots"]);
-const timestamp = new Date().getTime();
+const { Pro } = require('./bot_thread');
+const readline = require('readline-sync');
+const { bots, timestamp } = require('./lib/config');
+const dbug = require('./lib/debug');
+const bot_keys = Object.keys(bots);
 
 for (let i in bot_keys) {
     const bot_key = bot_keys[i];
-    const bot = config["bots"][bot_key];
-    // check if in debug is true
-    // if is debug mode
-        // only get test_products
-        // also do not check out
-        // do not check for
+    const bot = bots[bot_key];
     const products_ids = bot["product_ids"];
     if (bot["is_prod"] === true && products_ids.length) {
-        // console.log(bot);'
-        const delay = Productivity.delay_math(bot["delays"], (Math.pow(products_ids.length, 2)));
-        // console.log(delay);
+        const delay = Pro.delay_math(bot["delays"], (Math.pow(products_ids.length, 2)));
         const lc_bot = bot_key.toLowerCase();
-        const bot_file = `./bots/${lc_bot}.js`;
+        const bot_file = `./bots/monitor_${lc_bot}.js`;
+        // Setting the bot product number and the ODIN executing product number.
         let prod_num = 1, ex_prod_num = 1;
-        // call the monitor object and start running
+        // Loop through products in each monitor and call each monitor task object
         for (let product_id in products_ids) {
             let pid = products_ids[product_id];
             if (bot.hasOwnProperty("product_id_type")) {
 
                 setTimeout(function() {
                     let product_identification = typeof pid === "object" ? pid.id : pid;
-                    console.log(`The ${bot_key} # ${prod_num} monitor will run product id ${product_identification}`);
-                    // console.log(config, bot, pid, prod_num, timestamp);
+                    dbug.log(`The ${bot_key} # ${prod_num} monitor will run product id ${product_identification}`);
+                    let workData = {bot, pid, delay, prod_num, lc_bot};
+                    // // console.log(config, bot, pid, prod_num, timestamp);
                     const port = new Worker(require.resolve(bot_file), {
-                        workerData: {config, bot, pid, delay, prod_num, timestamp},
+                        workerData: workData,
                     });
-                    // console.log(gen_timestamp(timestamp));
-                    // port.on("message", (data) => console.log(`Worker data running for bot ${lc_bot} product sku:${data['product_id']} `));
-                    port.on("error", (e) => console.log(e));
-                    // port.on("exit", (code) => console.log(`Exit code ${code} from bot ${lc_bot}`));
                     prod_num++;
+                    dbug.high(`Product number is ${prod_num} executed at ${Pro.ts(timestamp)}s into script`)
                 }, 3000 * ex_prod_num);
                 ex_prod_num++;
+                dbug.med(``)
             } else {
-                console.info(`The ${i} monitor is not configured`);
+                dbug.med(`The ${i} monitor is not configured`);
             }
         }
     }
