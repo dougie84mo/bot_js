@@ -1,6 +1,8 @@
 const webhook = require('webhook-discord');
 const axios = require('axios');
-const {timestamp, bots, proxies, env} = require('./lib/config');
+const {timestamp, proxies, env, deb} = require('./lib/config');
+const {profile_actions} = require('./bots/profile_generator');
+const readline = require('readline-sync');
 
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -9,24 +11,89 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const http = require('http');
 const { Worker } = require('worker_threads');
 
+class Thor {
 
+    _bots = null;
+    _timestamp = null;
+    _proxy = null;
+    _env = null;
+
+    constructor(bot_args) {
+        this._timestamp = timestamp;
+        this._proxies = proxies;
+        this._env = env;
+        this._proxy = bot_args.hasOwnProperty("proxy") ? bot_args["proxy"] : "127.0.0.1";
+        this.bot_name = bot_args['bot_name'];
+        this.bot_args = bot_args;
+    }
+
+    is_debug() {return env.id <= 0;}
+    is_prod() {return !this.is_debug();}
+    ts() {return Productivity.ts(this._timestamp);}
+    async run() {await this.run_init();}
+    async run_init() {console.log("Run init not configured");}
+
+}
+
+class BotTestApp {
+    static test_app () {
+        let app = BotApp.init();
+    }
+    static test_monitors (bots) {
+        for (let [i, bot] in Object.entries(bots)) {
+            // const bot = bots[i];
+            // set object with bot_options
+        }
+    }
+
+    static test_checkout (bots) {
+        for (let [i, bot] in Object.entries(bots)) {
+            // const bot = bots[i];
+            // set object with bot_options
+        }
+    }
+
+    static test_raffles () {
+        let raffle = null;
+        while (raffle === null) {
+            let answer = readline.question("");
+        }
+        let raffle_times = null;
+    }
+
+    static test_profiles() {
+        let action_keys = Object.keys(profile_actions);
+        let profile_key = Productivity.choosable_list(action_keys, "Which action do you prefer? ");
+        let profile_callable = profile_actions.hasOwnProperty(profile_key) ? profile_actions[profile_key] : null;
+        if (profile_callable !== null) {
+            profile_callable();
+        }
+    }
+}
 
 class Productivity {
 
+    static async waitminute(minutes) {await sleep(60*minutes);}
     static ts(timestamp=null) {return timestamp===null ? new Date().getTime() : (new Date().getTime()-timestamp)/1000;}
-    static random_int_between(min, max) {return Math.floor(Math.random() * (max - min + 1) + min)}
-    static random_int_exclusive_between(min, max) {return Math.floor(Math.random() * (max - min) + min)}
-    static random_int_number(n) {
+    static random_int(min, max) {return Math.floor(Math.random() * (max - min + 1) + min)}
+    static random_num(multiplier=1, integer=true) {
+        return integer ? Math.floor(Math.random() * multiplier) : Math.random() * multiplier;
+    }
+    static random_int_size(n) {
         // 12 is the min safe number Math.random() can generate without it starting to pad the end with zeros.
         let add = 1, max = 12 - add;
         if ( n > max ) {
-            return Productivity.random_int_number(max) + Productivity.random_int_number(n - max);
+            return Productivity.random_int_size(max) + Productivity.random_int_size(n - max);
         }
         max        = Math.pow(10, n+add);
         let min    = max/10; // Math.pow(10, n) basically
-        let number = Productivity.random_int_between(min, max);
+        let number = Productivity.random_num(min, max);
         return ("" + number).substring(add);
     }
+    static non_null_answer() {
+
+    }
+
 
     static generate_worker(file, workData, error = null) {
         const port = new Worker(require.resolve(file), {workerData: workData,});
@@ -35,6 +102,24 @@ class Productivity {
             port.on("error", (e) => console.error(e));
         }
         return port;
+    }
+
+    static choosable_list(choices, question='What choice do you pick?') {
+        let temp_arr = [];
+        for (let [key, value] of Object.entries(choices)) {
+            console.log(`[${key}]: ${value}`);
+            temp_arr.push(value);
+        }
+        let answer = null;
+        while (answer === null) {
+            let response = readline.question(question);
+            if (response <= temp_arr.length - 1) {
+                answer = temp_arr[response];
+            } else {
+                console.log('Choice is not available');
+            }
+        }
+        return answer;
     }
 
     static delay_math(delays, multiplier) {
@@ -52,7 +137,6 @@ class Productivity {
         }
         return delay;
     }
-
     static format_url(url_str, params) {
         for (let i = 0; i < params.length; i++) {
             url_str = url_str.replace("%X", params[i]);
@@ -60,21 +144,7 @@ class Productivity {
         return url_str;
     }
 
-    static proxy_id(proxy_num, proxy_list) {
-        let proxy_id = proxy_num;
-        proxy_id--;
-        // Minus one to find the correct key of the proxy array
-        // Using the proxy length, if the proxy number is still greater than the proxy array length, then keep subtracting the length of the array until a valid key is set
-        let proxy_length = proxy_list.length;
-        if (proxy_id > proxy_length) {
-            while (proxy_id > proxy_length) {
-                proxy_id = proxy_id - proxy_length;
-            }
-        }
-        return proxy_id < 0 || proxy_id > proxy_length ? null : proxy_list[proxy_id];
-    }
-
-    static async browser_init(callback=null, headless=false, proxy=null) {
+    static async browser_launch(headless=false, proxy=null) {
         let proxy_name = proxy === null ? '127.0.0.1:9876' : proxy['proxy_server'];
         let alwaysArgs = [
             '--no-sandbox',
@@ -100,141 +170,57 @@ class Productivity {
         };
         if (proxy) {
             // TODO: Apply puppeteer stealth config and auto captcha where necessary
-
             await puppeteer.use(StealthPlugin());
         }
-        const browser = await puppeteer.launch(options);
-        if (callback === null) {
-            return browser;
-        } else {
-            const page = await browser.newPage();
-            if (proxy) {
-                let username = proxy['username'];
-                let password = proxy['password'];
-                await page.authenticate({username, password})
-            }
-            // console.log('Run callable');
-            await callback(page);
-            // console.log('Callable ran');
-            await sleep(60);
-            await browser.close();
+        return await puppeteer.launch(options);
+    }
+
+    static async browser_init(callback=null, headless=false, proxy=null) {
+        let browser = Productivity.browser_launch(headless, proxy);
+        const page = await browser.newPage();
+        if (proxy) {
+            let username = proxy['username'];
+            let password = proxy['password'];
+            await page.authenticate({username, password})
         }
+        // console.log('Run callable');
+        await callback(page);
+        // console.log('Callable ran');
+        await sleep(60);
+        await browser.close();
     }
-}
-
-class Thor {
-
-    _bots = null;
-    _timestamp = null;
-    _proxies = null;
-
-    constructor(bot_args) {
-        this._bots = bots;
-        this._timestamp = timestamp;
-        this._proxies = proxies;
-        this.bot_name = bot_args['lc_bot']
-        this.bot_args = bot_args;
-    }
-
-    is_debug() {return env.id <= 0;}
-    is_prod() {return !this.is_debug();}
-    ts() {return Productivity.ts(this._timestamp);}
-}
-
-class BaseMonitor extends Thor {
-
-    item_id = null;
-    monitor_counter=0;
-
-    constructor(bot_args) {
-        super(bot_args);
-        console.log(this);
-        // this.product_type = this._bots["product_id_type"].split('_');
-        this.item_id = bot_args["pid"].split("___");
-        this.delay = bot_args["delay"];
-        if (this._bots.hasOwnProperty("paths") && this._bots["paths"].hasOwnProperty("webhook")) {
-            this.hook = new Discorder(this._bots["paths"]["webhook"]);
+    static proxy_id(proxy_num, proxy_list) {
+        let proxy_id = proxy_num-1;
+        // Minus one to find the correct key of the proxy array
+        // Using the proxy length, if the proxy number is still greater than the proxy array length, then keep subtracting the length of the array until a valid key is set
+        let proxy_length = proxy_list.length;
+        if (proxy_id > proxy_length) {
+            while (proxy_id > proxy_length) {proxy_id = proxy_id - proxy_length;}
         }
-    }
-
-    async browser_init(callback=null, enable_recaptcha=false) {
-        // Proxy id starts as the bot product number
-        let proxy_id = this.bot_args['prod_num'];
-        let proxy = Productivity.proxy_id(proxy_id, this.conf['proxies'])
-        let is_headless = this.is_prod();
-        await Productivity.browser_init(callback, is_headless, proxy);
-    }
-
-
-    get_item_id() {
-        return typeof(this.item_id) === 'object' && this.item_id.hasOwnProperty('id') ? this.item_id.id : this.item_id;
-    }
-
-
-
-    rnum(multiplier=1, integer=true) {
-        let num = Math.random() * multiplier;
-        return integer ? Math.floor(num) : num;
-    }
-
-    run_init() {
-        // console.log(`Awaited product ${this.get_item_id()} in ${this.get_timestamp()} seconds`);
-        this.run();
-    }
-
-    async minute_sleep(minutes) {
-        await sleep(60*minutes);
+        return proxy_id < 0 || proxy_id > proxy_length ? null : proxy_list[proxy_id];
     }
 
     async api_product_key_json_response(url) {
         return new Promise((resolve, reject) => {
             axios.get(url)
-            .then(response => {
-                // console.log(response);
-                if (response.status !== 200) {
-                    this.hook.discordup("NOT URL", "DEVON THE BOT STOPPED WORKING, COME REFRESH ME", "OTher URL");
-                }
-                const jsonstring = response.data;
-                resolve(jsonstring);
-            }).catch(err => {
+                .then(response => {
+                    // console.log(response);
+                    if (response.status !== 200) {
+                        this.hook.discordup("NOT URL", "DEVON THE BOT STOPPED WORKING, COME REFRESH ME", "OTher URL");
+                    }
+                    const jsonstring = response.data;
+                    resolve(jsonstring);
+                }).catch(err => {
                 console.error(err);
                 reject(err);
             });
         });
     }
-
-    generate_product_url(params) {
-        return new Promise(resolve => {
-            const url_str = Productivity.format_url(
-                this._bots["paths"]["product_url"],
-                params
-            );
-            resolve(url_str);
-        })
-    }
-
-    async carting_callback() {/* get accounts or*/}
-
-
-    get item_id() {return this.item_id;}
-    product_url(merge_arr=[]) {return this.generate_product_url([].concat([this.item_id[0]], merge_arr));}
-
-
-
 }
 
-class BaseBotTask extends Thor {
-    constructor(bot_args) {
-        super(bot_args);
-        this.account = bot_args['account'];
-        this.product_url = bot_args['product_url'];
-        this.proxy = bot_args['proxies'];
-    }
 
-    async run_init() {
-        await Productivity.browser_init(this.proxy, null, this.run);
-    }
-}
+
+
 
 
 
@@ -267,6 +253,49 @@ class Discorder {
 //
 
 
+class BotApp {
+    constructor() {
+    }
+    init() {
+        return 'instance';
+    }
+
+    static run_monitor(bot, bot_name='amazon', timestamp=null, callback=null) {
+            // const bot = bots[i];
+            const monitor_init = `./bots/monitor.js`;
+            bot_name = bot_name.toLowerCase();
+            const products_ids = bot["product_ids"];
+            if (bot["is_prod"] === true && products_ids.length) {
+                const delay = Productivity.delay_math(bot["delays"], (Math.pow(products_ids.length, 2)));
+                // Setting the bot product number and the ODIN executing product number.
+                let prod_num = 1, ex_prod_num = 1;
+                // Loop through products in each monitor and call each monitor task.bat object
+                for (let product_id in products_ids) {
+                    let pid = products_ids[product_id];
+                    if (bot.hasOwnProperty("product_id_type")) {
+                        setTimeout(function() {
+                            let product_identification = typeof pid === "object" ? pid.id : pid;
+                            deb.log(`The ${i} # ${prod_num} monitor will run product id ${product_identification}`);
+                            let workData = {bot, pid, delay, prod_num, bot_name};
+                            // // console.log(config, bot, pid, prod_num, timestamp);
+                            const port = new Worker(require.resolve(monitor_init), {
+                                workerData: workData,
+                            });
+                            prod_num++;
+                            deb.high(`Product number is ${prod_num} executed at ${Productivity.ts(timestamp)}s into script`)
+                        }, 3000 * ex_prod_num);
+                        ex_prod_num++;
+                        deb.med(``)
+                    } else {
+                        deb.med(`The ${bot_name} monitor is not configured`);
+                    }
+                }
+            }
+            // set object with bot_options
+        }
+}
+
+
 
 // remember to call asynchronously
 function sleep(seconds) {
@@ -277,10 +306,10 @@ function sleep(seconds) {
 
 module.exports = {
     Pro: Productivity,
-    Thor: Thor,
-    Discorder: Discorder,
-    BaseMonitor: BaseMonitor,
-    BaseBotTask: BaseBotTask,
+    Thor,
+    Discorder,
+    BotApp,
+    BotTestApp,
+    deb,
     sleep,
-    gen_timestamp
 };

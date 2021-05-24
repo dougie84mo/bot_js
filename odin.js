@@ -1,46 +1,52 @@
 // const { exit } = require('process');
-// const cluster = require('cluster');
-import { Worker } from "worker_threads";
+// const cluster = require('cluster');fff
+// const readline = require('readline-sync');
+const { Worker } = require("worker_threads");
+const { Pro, BotApp, BotTestApp } = require('./bot_thread');
+const { bots, env, deb} = require('./lib/config');
+const { command_task_list, task_value_id } = require('./lib/command');
+if (env.id === 0) {
+    console.log('DEV MODE')
+    const action_process = Pro.choosable_list(command_task_list, "What would you like to run? ");
+    let action_id = task_value_id[action_process];
+    deb.med(action_process);
+    function tcomp(value) {
+        deb.log(action_process);
+        return task_value_id[value] === action_process;
+    }
 
-const { Pro } = require('./bot_thread');
-const readline = require('readline-sync');
-const { bots, timestamp } = require('./lib/config');
-const dbug = require('./lib/debug');
-const bot_keys = Object.keys(bots);
-
-for (let i in bot_keys) {
-    const bot_key = bot_keys[i];
-    const bot = bots[bot_key];
-    const products_ids = bot["product_ids"];
-    if (bot["is_prod"] === true && products_ids.length) {
-        const delay = Pro.delay_math(bot["delays"], (Math.pow(products_ids.length, 2)));
-        const lc_bot = bot_key.toLowerCase();
-        const bot_file = `./bots/monitor_${lc_bot}.js`;
-        // Setting the bot product number and the ODIN executing product number.
-        let prod_num = 1, ex_prod_num = 1;
-        // Loop through products in each monitor and call each monitor task object
-        for (let product_id in products_ids) {
-            let pid = products_ids[product_id];
-            if (bot.hasOwnProperty("product_id_type")) {
-
-                setTimeout(function() {
-                    let product_identification = typeof pid === "object" ? pid.id : pid;
-                    dbug.log(`The ${bot_key} # ${prod_num} monitor will run product id ${product_identification}`);
-                    let workData = {bot, pid, delay, prod_num, lc_bot};
-                    // // console.log(config, bot, pid, prod_num, timestamp);
-                    const port = new Worker(require.resolve(bot_file), {
-                        workerData: workData,
-                    });
-                    prod_num++;
-                    dbug.high(`Product number is ${prod_num} executed at ${Pro.ts(timestamp)}s into script`)
-                }, 3000 * ex_prod_num);
-                ex_prod_num++;
-                dbug.med(``)
-            } else {
-                dbug.med(`The ${i} monitor is not configured`);
-            }
+    function test_app_feature(action_value) {
+        let bot_app = {};
+        bot_app['bot_app'] = () => {BotTestApp.test_app();};
+        bot_app['monitor'] = () => {BotTestApp.test_monitors();};
+        bot_app['checkout'] = () => {BotTestApp.test_checkout();};
+        bot_app['raffle'] = () => {BotTestApp.test_raffles();};
+        bot_app['account_generator'] = () => {BotTestApp.test_monitors();};
+        bot_app['harvest'] = () => {BotTestApp.test_monitors();};
+        bot_app['profiles'] = () => {BotTestApp.test_profiles();};
+        if (bot_app.hasOwnProperty(action_value)) {
+            let app = bot_app[action_value];
+            app();
         }
     }
-    // set object with bot_options
+    test_app_feature(action_id);
+} else if (env.id === 1) {
+
+    function app_feature(action_value) {
+        let bot_app = {};
+        bot_app['bot_app'] = () => {BotApp.test_app();};
+        bot_app['monitor'] = () => {BotApp.test_monitors();};
+        bot_app['checkout'] = () => {BotApp.test_checkout();};
+        bot_app['raffle'] = () => {BotApp.test_monitors();};
+        bot_app['account_generator'] = () => {BotApp.test_monitors();};
+        bot_app['harvest'] = () => {BotApp.test_monitors();};
+        bot_app['profiles'] = () => {BotApp.test_monitors();};
+    }
+    test_app_feature(action_id);
 }
+
+
+
+
+
 

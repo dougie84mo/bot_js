@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Node project for boting specialty items and monitors",
   "main": "odin.js",
+  "bin": {
+    "task": "task.bat"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
