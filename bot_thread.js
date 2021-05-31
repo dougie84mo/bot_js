@@ -1,7 +1,6 @@
 const webhook = require('webhook-discord');
 const axios = require('axios');
 const {timestamp, proxies, env, deb} = require('./lib/config');
-const {profile_actions} = require('./bots/profile_generator');
 const readline = require('readline-sync');
 
 const puppeteer = require('puppeteer-extra');
@@ -10,6 +9,84 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 // const { proxyRequest } = require('puppeteer-proxy');
 const http = require('http');
 const { Worker } = require('worker_threads');
+
+class Discorder {
+    constructor(hook_url) {
+        this.Hook = new webhook.Webhook(hook_url);
+    }
+
+    discordup(url, productName, productUrl, description=null, image=null, tn=null) {
+        let msg = new webhook.MessageBuilder()
+            .setTitle(productName)
+            .setText(productUrl)
+            .setDescription(`[CLICK HERE TO ADD TO CART](${url})`);
+
+        if (description !== null) { msg.addField("Description: ", description); }
+        if (image !== null) {msg.setImage(image);}
+        if (tn !== null) {msg.setThumbnail(tn);}
+        msg.setFooter("Created by DnD network", "https://image.ibb.co/gq7xgT/blackyzylogo.png")
+        this.Hook.send(msg);
+    }
+
+    discord_async(url, productName, productUrl, description=null, image=null, tn=null) {
+        return new Promise(resolve => {
+            this.discordup(url, productName, productUrl, description, image, tn)
+        })
+    }
+}
+
+//
+
+
+class BotApp {
+    constructor() {
+    }
+
+    app() {
+        return 'instance';
+    }
+
+    static run_monitor(bot, bot_name='amazon', timestamp=null, callback=null) {
+        // const bot = bots[i];
+        const monitor_init = `./bots/monitor.js`;
+        bot_name = bot_name.toLowerCase();
+        const products_ids = bot["product_ids"];
+        if (bot["is_prod"] === true && products_ids.length) {
+            const delay = Productivity.delay_math(bot["delays"], (Math.pow(products_ids.length, 2)));
+            // Setting the bot product number and the ODIN executing product number.
+            let prod_num = 1, ex_prod_num = 1;
+            // Loop through products in each monitor and call each monitor task.bat object
+            for (let product_id in products_ids) {
+                let pid = products_ids[product_id];
+                if (bot.hasOwnProperty("product_id_type")) {
+                    setTimeout(function() {
+                        let product_identification = typeof pid === "object" ? pid.id : pid;
+                        deb.log(`The ${i} # ${prod_num} monitor will run product id ${product_identification}`);
+                        let workData = {bot, pid, delay, prod_num, bot_name};
+                        // // console.log(config, bot, pid, prod_num, timestamp);
+                        const port = new Worker(require.resolve(monitor_init), {
+                            workerData: workData,
+                        });
+                        prod_num++;
+                        deb.high(`Product number is ${prod_num} executed at ${Productivity.ts(timestamp)}s into script`)
+                    }, 3000 * ex_prod_num);
+                    ex_prod_num++;
+                    deb.med(``)
+                } else {
+                    deb.med(`The ${bot_name} monitor is not configured`);
+                }
+            }
+        }
+        // set object with bot_options
+    }
+}
+
+
+
+// remember to call asynchronously
+function sleep(seconds) {
+    return new Promise(resolve => setTimeout(resolve, seconds*1000));
+}
 
 class Thor {
 
@@ -25,6 +102,7 @@ class Thor {
         this._proxy = bot_args.hasOwnProperty("proxy") ? bot_args["proxy"] : "127.0.0.1";
         this.bot_name = bot_args['bot_name'];
         this.bot_args = bot_args;
+        this.hook = new Discorder('')
     }
 
     is_debug() {return env.id <= 0;}
@@ -32,43 +110,23 @@ class Thor {
     ts() {return Productivity.ts(this._timestamp);}
     async run() {await this.run_init();}
     async run_init() {console.log("Run init not configured");}
-
-}
-
-class BotTestApp {
-    static test_app () {
-        let app = BotApp.init();
-    }
-    static test_monitors (bots) {
-        for (let [i, bot] in Object.entries(bots)) {
-            // const bot = bots[i];
-            // set object with bot_options
-        }
-    }
-
-    static test_checkout (bots) {
-        for (let [i, bot] in Object.entries(bots)) {
-            // const bot = bots[i];
-            // set object with bot_options
-        }
+    async api_product_key_json_response(url) {
+        return new Promise((resolve, reject) => {
+            axios.get(url)
+                .then(response => {
+                    // console.log(response);
+                    if (response.status !== 200) {
+                        this.hook.discordup("NOT URL", "DEVON THE BOT STOPPED WORKING, COME REFRESH ME", "OTher URL");
+                    }
+                    const jsonstring = response.data;
+                    resolve(jsonstring);
+                }).catch(err => {
+                console.error(err);
+                reject(err);
+            });
+        });
     }
 
-    static test_raffles () {
-        let raffle = null;
-        while (raffle === null) {
-            let answer = readline.question("");
-        }
-        let raffle_times = null;
-    }
-
-    static test_profiles() {
-        let action_keys = Object.keys(profile_actions);
-        let profile_key = Productivity.choosable_list(action_keys, "Which action do you prefer? ");
-        let profile_callable = profile_actions.hasOwnProperty(profile_key) ? profile_actions[profile_key] : null;
-        if (profile_callable !== null) {
-            profile_callable();
-        }
-    }
 }
 
 class Productivity {
@@ -96,13 +154,14 @@ class Productivity {
 
 
     static generate_worker(file, workData, error = null) {
-        const port = new Worker(require.resolve(file), {workerData: workData,});
+        const port = new Worker(file, {workerData: workData});
         if (error !== null) {
             // Set port events if applicable
             port.on("error", (e) => console.error(e));
         }
         return port;
     }
+
 
     static choosable_list(choices, question='What choice do you pick?') {
         let temp_arr = [];
@@ -121,6 +180,24 @@ class Productivity {
         }
         return answer;
     }
+
+    // static selectable_list(choices, question='Which selections?') {
+    //     let temp_arr = [];
+    //     for (let [key, value] of Object.entries(choices)) {
+    //         console.log(`[${key}]: ${value}`);
+    //         temp_arr.push(value);
+    //     }
+    //     let answer = null;
+    //     while (answer === null) {
+    //         let response = readline.question(question);
+    //         if (response <= temp_arr.length - 1) {
+    //             answer = temp_arr[response];
+    //         } else {
+    //             console.log('Choice is not available');
+    //         }
+    //     }
+    //     return answer;
+    // }
 
     static delay_math(delays, multiplier) {
         let delay=60;
@@ -142,6 +219,46 @@ class Productivity {
             url_str = url_str.replace("%X", params[i]);
         }
         return url_str;
+    }
+
+    static browser_args(proxy_name=null) {
+        let alwaysArgs;
+        if (proxy_name) {
+            alwaysArgs = [
+                '--no-sandbox',
+                '--proxy-server=http://'+proxy_name,
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-infobars',
+                '--disable-automation',
+                '--allow-insecure-localhost',
+                '--disable-accelerated-2d-canvas',
+                '--start-maximized',
+                '--disable-web-security',
+                '--disable-features=IsolateOrigins,site-per-process',
+                '--lang=en-US,en;q=0.9',
+                '--ignore-certificate-errors'
+            ];
+        } else {
+            alwaysArgs = [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-infobars',
+                '--disable-automation',
+                '--allow-insecure-localhost',
+                '--disable-accelerated-2d-canvas',
+                '--start-maximized',
+                '--disable-web-security',
+                '--disable-features=IsolateOrigins,site-per-process',
+                '--lang=en-US,en;q=0.9',
+                '--ignore-certificate-errors'
+            ];
+        }
+
+        return alwaysArgs;
     }
 
     static async browser_launch(headless=false, proxy=null) {
@@ -200,107 +317,9 @@ class Productivity {
         return proxy_id < 0 || proxy_id > proxy_length ? null : proxy_list[proxy_id];
     }
 
-    async api_product_key_json_response(url) {
-        return new Promise((resolve, reject) => {
-            axios.get(url)
-                .then(response => {
-                    // console.log(response);
-                    if (response.status !== 200) {
-                        this.hook.discordup("NOT URL", "DEVON THE BOT STOPPED WORKING, COME REFRESH ME", "OTher URL");
-                    }
-                    const jsonstring = response.data;
-                    resolve(jsonstring);
-                }).catch(err => {
-                console.error(err);
-                reject(err);
-            });
-        });
-    }
+
 }
 
-
-
-
-
-
-
-
-class Discorder {
-    constructor(hook_url) {
-        this.Hook = new webhook.Webhook(hook_url);
-    }
-
-    discordup(url, productName, productUrl, description=null, image=null, tn=null) {
-        let msg = new webhook.MessageBuilder()
-            .setTitle(productName)
-            .setText(productUrl)
-            .setDescription(`[CLICK HERE TO ADD TO CART](${url})`);
-
-        if (description !== null) { msg.addField("Description: ", description); }
-        if (image !== null) {msg.setImage(image);}
-        if (tn !== null) {msg.setThumbnail(tn);}
-        msg.setFooter("Created by DnD network", "https://image.ibb.co/gq7xgT/blackyzylogo.png")
-        this.Hook.send(msg);
-    }
-
-    discord_async(url, productName, productUrl, description=null, image=null, tn=null) {
-        return new Promise(resolve => {
-           this.discordup(url, productName, productUrl, description, image, tn)
-        })
-    }
-}
-
-//
-
-
-class BotApp {
-    constructor() {
-    }
-    init() {
-        return 'instance';
-    }
-
-    static run_monitor(bot, bot_name='amazon', timestamp=null, callback=null) {
-            // const bot = bots[i];
-            const monitor_init = `./bots/monitor.js`;
-            bot_name = bot_name.toLowerCase();
-            const products_ids = bot["product_ids"];
-            if (bot["is_prod"] === true && products_ids.length) {
-                const delay = Productivity.delay_math(bot["delays"], (Math.pow(products_ids.length, 2)));
-                // Setting the bot product number and the ODIN executing product number.
-                let prod_num = 1, ex_prod_num = 1;
-                // Loop through products in each monitor and call each monitor task.bat object
-                for (let product_id in products_ids) {
-                    let pid = products_ids[product_id];
-                    if (bot.hasOwnProperty("product_id_type")) {
-                        setTimeout(function() {
-                            let product_identification = typeof pid === "object" ? pid.id : pid;
-                            deb.log(`The ${i} # ${prod_num} monitor will run product id ${product_identification}`);
-                            let workData = {bot, pid, delay, prod_num, bot_name};
-                            // // console.log(config, bot, pid, prod_num, timestamp);
-                            const port = new Worker(require.resolve(monitor_init), {
-                                workerData: workData,
-                            });
-                            prod_num++;
-                            deb.high(`Product number is ${prod_num} executed at ${Productivity.ts(timestamp)}s into script`)
-                        }, 3000 * ex_prod_num);
-                        ex_prod_num++;
-                        deb.med(``)
-                    } else {
-                        deb.med(`The ${bot_name} monitor is not configured`);
-                    }
-                }
-            }
-            // set object with bot_options
-        }
-}
-
-
-
-// remember to call asynchronously
-function sleep(seconds) {
-    return new Promise(resolve => setTimeout(resolve, seconds*1000));
-}
 
 
 
@@ -309,7 +328,6 @@ module.exports = {
     Thor,
     Discorder,
     BotApp,
-    BotTestApp,
-    deb,
+    env,
     sleep,
 };
