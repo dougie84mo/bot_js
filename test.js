@@ -1,6 +1,6 @@
 const readline = require("readline-sync");
 const {BotApp, Pro} = require("./bot_thread");
-const {profile_keys} = require("./tech_boy")
+const {profile_keys, profile_actions} = require("./tech_boy")
 
 class BotTestApp {
     static test_app () {
@@ -32,8 +32,9 @@ class BotTestApp {
         console.log('Start profile test');
         // Will be tabs in the app
         let action = Pro.choosable_list(profile_keys, "What type of profile action?");
-        //
-        console.log(bots);
+        profile_actions[action]();
+
+        console.log(action);
 
     }
 }

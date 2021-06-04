@@ -34,12 +34,7 @@ class Import {
 
     init(bot) {
         let bots = {
-            "Dashe": (json) => {
-                return Import.Dashe(json)
-            },
-            "Stellar": (json) => {
-                return Import.Stellar(json)
-            },
+
         }
     }
 

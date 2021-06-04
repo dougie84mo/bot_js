@@ -42,9 +42,7 @@ class BotApp {
     constructor() {
     }
 
-    app() {
-        return 'instance';
-    }
+
 
     static run_monitor(bot, bot_name='amazon', timestamp=null, callback=null) {
         // const bot = bots[i];
@@ -78,6 +76,10 @@ class BotApp {
             }
         }
         // set object with bot_options
+    }
+
+    static app() {
+
     }
 }
 

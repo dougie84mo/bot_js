@@ -20,15 +20,16 @@ class Form {
 
 const DATEOF_CHOICES = ["DOB", "EXP"]
 class DateOf {
-    _year
-    _month
-    _day
-    _type="DOB"
+    year
+    month
+    day
+    type="DOB"
 
-    constructor(year, month, day="15") {
-        this._year = year;
-        this._month = month;
-        this._day = day;
+    constructor(year, month, type=0, day="15") {
+        this.year = year;
+        this.month = month;
+        this.type = type
+        this.day = day;
     }
 
     static _to_obj(year="address", month="month", type="type", day="day") {
@@ -43,12 +44,15 @@ class DateOf {
 }
 
 function ask_for_date(type=1) {
-    let queries = {0: [
-            "Birthday Year", "Birthday Month", "Birthday"
-        ], 1: [
-            "Exp Year", "Exp Month"
-        ]};
-    let year = w_undefined("Year")
+    let queries = type === 0 ? ["Birthday Year", "Birthday Month", "Birthday"] : ["Exp Year", "Exp Month"];
+    let year = w_undefined(queries[0], false, true);
+    let month = w_undefined(queries[1], false, true);
+    if (type === 0) {
+        let day = w_undefined(queries[2], false, true);
+        return new DateOf(year, month, day);
+    }
+    return new DateOf(year, month);
+
 }
 
 
@@ -65,7 +69,17 @@ class Profile {
     _proxy;
     _card;
 
-    constructor(profile_name, fn, ln, email, phone, dob, shipping_address, billing_as_shipping=false, billing_address=null) {
+    constructor({
+                    profile_name,
+                    fn,
+                    ln,
+                    email,
+                    phone,
+                    dob,
+                    shipping_address,
+                    billing_as_shipping = false,
+                    billing_address = null
+                }) {
         this.profile_name = profile_name;
         this.fn = fn;
         this.ln = ln;
@@ -77,14 +91,16 @@ class Profile {
         this.billing_address = billing_as_shipping ? shipping_address : billing_address;
     }
 
-    static _to_obj(additional_opts={}, firstname="address", lastname="lastname", email="email", phone="phone", dob="dob", country="country") {
+    static _to_obj(additional_opts={}, profile_name="profile_name", firstname="address", lastname="lastname", email="email", phone="phone", dob="dob", shipping="shipping", billing_as_shipping=false, billing="billing") {
         let self = {
             fn: firstname,
             ln: lastname,
             email: email,
             phone: phone,
             dob: dob,
-            country: country,
+            shipping_address: shipping,
+            billing_as_shipping: billing_as_shipping,
+            billing_address: billing,
         };
         let merges = {...additional_opts, ...self};
     }
@@ -156,14 +172,14 @@ let w_undefined = function(q, allow_empty=false, integer=false) {
     let name = undefined;
     let is_empty = allow_empty ? (a) => false : (a) => a.trim() !== ""
     while (name !== undefined) {
-        let n = integer ? readline.questionInt(q) :readline.question(q);
+        let n = integer ? readline.questionInt(q) : readline.question(q);
         name = typeof n === "string" && !is_empty(n) ? n.trim() : undefined;
     }
     return name;
 }
 
 let get_addresses_file = () => {return fs.readFileSync(address_path, {"encoding": "utf8"});};
-let get_file_path = (path, data) => {return fs.readFileSync(path, {"encoding": "utf8"});};
+let get_file_path = (path) => {return fs.readFileSync(path, {"encoding": "utf8"});};
 let save_file_path = (path, data) => {return fs.writeFileSync(path, JSON.stringify(data));};
 
 
@@ -204,9 +220,10 @@ profilers[0] = () => {
     };
     let ask_for_card = () => {
         let cardholder_name = w_undefined("Cardholder Name:  ");
-        let card_number = w_undefined("Address Two: ", true);
-        let card_exp = w_undefined("City: ");
-        return new Card(cardholder_name, card_number, card_exp);
+        let card_number = w_undefined("Card Number: ", false, true);
+        let date = ask_for_date(1);
+        let sec_code = w_undefined("Security Code  ", false, true);
+        return new Card(cardholder_name, card_number, date, sec_code);
     };
     let profile_actions = {}
     profile_actions["generate_profile"] = () => {
@@ -215,12 +232,63 @@ profilers[0] = () => {
         let ln = env.id === 0 ? "Richardson" :w_undefined("Last Name: ");
         let email = w_undefined("Email: ");
         let phone = w_undefined("Phone: ");
-        let dob = w_undefined("Birthdate: ");
-        let shipping_address = generator["ask_for_address"]();
+        let dob = ask_for_date(0);
+        let card = ask_for_card(0);
+        let shipping_address = ask_for_address();
         let is_billing = Form.cl_boolean("Is the billing email the same as the shipping email?")
-        let billing_address = is_billing ? shipping_address : shipping_address["ask_for_address"]();
-        return new Profile(profile_name, fn, ln, email, phone, dob, shipping_address, is_billing, billing_address);
+        let billing_address = is_billing ? shipping_address : ask_for_address();
+        return new Profile({
+            profile_name: profile_name,
+            fn: fn,
+            ln: ln,
+            email: email,
+            phone: phone,
+            dob: dob,
+            shipping_address: shipping_address,
+            billing_as_shipping: is_billing,
+            billing_address: billing_address
+        });
     };
+
+    profile_actions["import_profiles"] = (profile_list="") => {
+        let bots = {
+            "Dashe": (key, json) => {
+                let shipping = json["shipping"];
+                let shipping_obj = new Address(json["address"], json["apt"], json["city"], json["zip"], json["state"], "US");
+                let billing = json["billing"];
+                let billing_obj = json["billingMatch"] ? shipping_obj : new Address(json["address"], json["apt"], json["city"], json["zip"], json["state"], "US");
+                let dob = new DateOf(1992, 3, 1, 20);
+                return Profile._to_obj({}, json["profileName"], shipping["firstName"], shipping["lastName"], json["email"], shipping["phoneNumber"], dob, shipping_obj, json["billingMatch"], billing_obj);
+
+            },
+            "Stellar": (json) => {}
+        };
+        let file_path = w_undefined("What is the path of the file you would like to import? ");
+        let bot = Pro.choosable_list(Object.keys(bots), "Which format is it being imported from? ");
+        let bot_profile_file = fs.readFileSync(file_path, {"encoding": "utf8"});
+        let bot_profiles = JSON.parse(bot_profile_file);
+        if (bot_profiles.constructor === [].constructor) {
+            let new_bot_profiles = {};
+            for (let bot_profile in bot_profiles) {
+                new_bot_profiles[bot_profile] = bot_profiles[bot_profile];
+            }
+            bot_profiles = new_bot_profiles;
+        }
+
+        if (bot_profiles.constructor === ([]).constructor) {
+            let temp_obj = {};
+            for (let [key, value] of bot_profiles) {
+                temp_obj[key] = bots[bot](value);
+            }
+        } else {
+            deb.low("Profile destructuring failed or false constructor");
+        }
+
+    };
+
+
+    let action = Pro.choosable_list(Object.keys(profile_actions), "Command >");
+    profile_actions[action]();
 }
 
 profilers[1] = (workData) => {
@@ -243,7 +311,7 @@ vcards[1] = () => {
 
 }
 
-let profile_actions = {
+let profile_action_variables = {
     "profile": profilers[env.id],
     "accounts": accounts[env.id],
     "vcard": vcards[env.id],
@@ -252,11 +320,11 @@ let profile_actions = {
 module.exports = {
     Address,
     Profile,
-    profile_actions: profile_actions,
-    profile_keys: Object.keys(profile_actions),
+    profile_actions: profile_action_variables,
+    profile_keys: Object.keys(profile_action_variables),
     accounts: accounts,
     vcard: vcards,
     profile: profilers,
-    profiles: profile_actions,
+    profiles: profile_action_variables,
     w_undefined: w_undefined,
 };
