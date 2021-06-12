@@ -1,7 +1,5 @@
-const webhook = require('webhook-discord');
 const axios = require('axios');
 const {timestamp, proxies, env, deb} = require('./lib/config');
-const readline = require('readline-sync');
 
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -9,31 +7,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 // const { proxyRequest } = require('puppeteer-proxy');
 const http = require('http');
 const { Worker } = require('worker_threads');
-
-class Discorder {
-    constructor(hook_url) {
-        this.Hook = new webhook.Webhook(hook_url);
-    }
-
-    discordup(url, productName, productUrl, description=null, image=null, tn=null) {
-        let msg = new webhook.MessageBuilder()
-            .setTitle(productName)
-            .setText(productUrl)
-            .setDescription(`[CLICK HERE TO ADD TO CART](${url})`);
-
-        if (description !== null) { msg.addField("Description: ", description); }
-        if (image !== null) {msg.setImage(image);}
-        if (tn !== null) {msg.setThumbnail(tn);}
-        msg.setFooter("Created by DnD network", "https://image.ibb.co/gq7xgT/blackyzylogo.png")
-        this.Hook.send(msg);
-    }
-
-    discord_async(url, productName, productUrl, description=null, image=null, tn=null) {
-        return new Promise(resolve => {
-            this.discordup(url, productName, productUrl, description, image, tn)
-        })
-    }
-}
+const {Pro, Discorder} = require('tech_boy');
 
 //
 
@@ -86,9 +60,7 @@ class BotApp {
 
 
 // remember to call asynchronously
-function sleep(seconds) {
-    return new Promise(resolve => setTimeout(resolve, seconds*1000));
-}
+
 
 class Thor {
 
@@ -109,7 +81,7 @@ class Thor {
 
     is_debug() {return env.id <= 0;}
     is_prod() {return !this.is_debug();}
-    ts() {return Productivity.ts(this._timestamp);}
+    ts() {return Pro.ts(this._timestamp);}
     async run() {await this.run_init();}
     async run_init() {console.log("Run init not configured");}
     async api_product_key_json_response(url) {
@@ -132,96 +104,6 @@ class Thor {
 }
 
 class Productivity {
-
-    static async waitminute(minutes) {await sleep(60*minutes);}
-    static ts(timestamp=null) {return timestamp===null ? new Date().getTime() : (new Date().getTime()-timestamp)/1000;}
-    static random_int(min, max) {return Math.floor(Math.random() * (max - min + 1) + min)}
-    static random_num(multiplier=1, integer=true) {
-        return integer ? Math.floor(Math.random() * multiplier) : Math.random() * multiplier;
-    }
-    static random_int_size(n) {
-        // 12 is the min safe number Math.random() can generate without it starting to pad the end with zeros.
-        let add = 1, max = 12 - add;
-        if ( n > max ) {
-            return Productivity.random_int_size(max) + Productivity.random_int_size(n - max);
-        }
-        max        = Math.pow(10, n+add);
-        let min    = max/10; // Math.pow(10, n) basically
-        let number = Productivity.random_num(min, max);
-        return ("" + number).substring(add);
-    }
-    static non_null_answer() {
-
-    }
-
-
-    static generate_worker(file, workData, error = null) {
-        const port = new Worker(file, {workerData: workData});
-        if (error !== null) {
-            // Set port events if applicable
-            port.on("error", (e) => console.error(e));
-        }
-        return port;
-    }
-
-
-    static choosable_list(choices, question='What choice do you pick?') {
-        let temp_arr = [];
-        for (let [key, value] of Object.entries(choices)) {
-            console.log(`[${key}]: ${value}`);
-            temp_arr.push(value);
-        }
-        let answer = null;
-        while (answer === null) {
-            let response = readline.question(question);
-            if (response <= temp_arr.length - 1) {
-                answer = temp_arr[response];
-            } else {
-                console.log('Choice is not available');
-            }
-        }
-        return answer;
-    }
-
-    // static selectable_list(choices, question='Which selections?') {
-    //     let temp_arr = [];
-    //     for (let [key, value] of Object.entries(choices)) {
-    //         console.log(`[${key}]: ${value}`);
-    //         temp_arr.push(value);
-    //     }
-    //     let answer = null;
-    //     while (answer === null) {
-    //         let response = readline.question(question);
-    //         if (response <= temp_arr.length - 1) {
-    //             answer = temp_arr[response];
-    //         } else {
-    //             console.log('Choice is not available');
-    //         }
-    //     }
-    //     return answer;
-    // }
-
-    static delay_math(delays, multiplier) {
-        let delay=60;
-        if (typeof delays === "number") {
-            delay = Math.ceil(delays);
-        } else if (typeof delays === "object") {
-            if (delays.hasOwnProperty("daily")) {
-                delay = Math.ceil(86400/delays["daily"]) * multiplier;
-            } else if (delays.hasOwnProperty("hour")) {
-                delay = Math.ceil(3600/delays["hour"]) * multiplier;
-            } else if (delays.hasOwnProperty("minute")) {
-                delay = Math.ceil(60/delays["minute"]) * multiplier;
-            }
-        }
-        return delay;
-    }
-    static format_url(url_str, params) {
-        for (let i = 0; i < params.length; i++) {
-            url_str = url_str.replace("%X", params[i]);
-        }
-        return url_str;
-    }
 
     static browser_args(proxy_name=null) {
         let alwaysArgs;
@@ -308,6 +190,7 @@ class Productivity {
         await sleep(60);
         await browser.close();
     }
+
     static proxy_id(proxy_num, proxy_list) {
         let proxy_id = proxy_num-1;
         // Minus one to find the correct key of the proxy array
@@ -328,8 +211,6 @@ class Productivity {
 module.exports = {
     Pro: Productivity,
     Thor,
-    Discorder,
     BotApp,
     env,
-    sleep,
 };

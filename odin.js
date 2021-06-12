@@ -1,36 +1,38 @@
-// const { exit } = require('process');
-// const cluster = require('cluster');
-// const { Worker } = require("worker_threads");
-const { BrowserWindow, app } = require('electron');
+const { BrowserWindow, app, ipcMain, nativeTheme } = require('electron');
 const path = require('path');
+const { env, deb} = require('./lib/config');
 // const { Pro, BotApp} = require('./bot_thread');
 // const { BotTestApp } = require('./test');
-// const { bots, env, deb} = require('./lib/config');
 // const { command_task_list } = require('./lib/command');
-
-
-// app.on('ready', () => { const win = new BrowserWindow({ width: 1200, height: 800, backgroundColor: "#7ccfeb",
-//         webPreferences: { nodeIntegration: false, worldSafeExecuteJavaScript: true, contextIsolation: true } });
-//     win.loadFile('index.html'); });
 
 function createWindow() {
     const win = new BrowserWindow({
-        width: 1200,
+        width: 1600,
         height: 800,
-        backgroundColor: "#7ccfeb",
         webPreferences: {
             nodeIntegration: false,
             worldSafeExecuteJavaScript: true,
-            contextIsolation: true
+            contextIsolation: true,
+            preload: path.join(__dirname, 'prelood.components')
         }
-    });
 
+    });
+    //Can be awaited?
+    win.removeMenu();
     win.loadFile('index.html');
+    ipcMain.handle('dark-mode:toggle', () => {
+        nativeTheme.themeSource = nativeTheme.shouldUseDarkColors ? 'light' : 'dark'
+    })
+    ipcMain.handle('dark-mode:system', () => {
+        nativeTheme.themeSource = 'system'
+    })
+}
+if (env.id === 0){
+    require('electron-reload')(__dirname, {
+        electron: path.join(__dirname, 'node_modules', '.bin', 'electron')
+    });
 }
 
-require('electron-reload')(__dirname, {
-    electron: path.join(__dirname, 'node_modules', '.bin', 'electron')
-})
 
 app.whenReady().then(createWindow)
 

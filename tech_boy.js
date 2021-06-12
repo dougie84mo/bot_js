@@ -1,13 +1,168 @@
-const {Pro, env, deb, environments} = require('./bot_thread');
+// const {env, deb, environments} = require('./bot_thread');
+
 // const {deb} = require('./lib/config');
 const fs = require('fs');
-const axios = require('axios');
-const path = require('path');
-const readline = require('readline-sync');
-const data_dir = '.\\..\\data\\';
-const profiles_directory = `${data_dir}profiles\\`;
-const address_path = `${data_dir}addresses.json`;
+// const axios = require('axios');
+// const path = require('path');
 
+// const readline = require('readline-sync');
+const webhook = require("webhook-discord");
+// const data_dir = '.\\..\\data\\';
+// const profiles_directory = `${data_dir}profiles\\`;
+// const address_path = `${data_dir}addresses.json`;
+
+function sleep(seconds) {
+    return new Promise(resolve => setTimeout(resolve, seconds*1000));
+}
+
+class Pro {
+
+    /*Time*/
+    static async waitminute(minutes) {await sleep(60*minutes);}
+    static ts(timestamp=null) {return timestamp===null ? new Date().getTime() : (new Date().getTime()-timestamp)/1000;}
+
+    /*Numbers*/
+    static random_int(min, max) {return Math.floor(Math.random() * (max - min + 1) + min)}
+    static random_num(multiplier=1, integer=true) {
+        return integer ? Math.floor(Math.random() * multiplier) : Math.random() * multiplier;
+    }
+    static random_int_size(n) {
+        // 12 is the min safe number Math.random() can generate without it starting to pad the end with zeros.
+        let add = 1, max = 12 - add;
+        if ( n > max ) {
+            return Pro.random_int_size(max) + Pro.random_int_size(n - max);
+        }
+        max        = Math.pow(10, n+add);
+        let min    = max/10; // Math.pow(10, n) basically
+        let number = Pro.random_num(min, max);
+        return ("" + number).substring(add);
+    }
+    static delay_math(delays, multiplier) {
+        let delay=60;
+        if (typeof delays === "number") {
+            delay = Math.ceil(delays);
+        } else if (typeof delays === "object") {
+            if (delays.hasOwnProperty("daily")) {
+                delay = Math.ceil(86400/delays["daily"]) * multiplier;
+            } else if (delays.hasOwnProperty("hour")) {
+                delay = Math.ceil(3600/delays["hour"]) * multiplier;
+            } else if (delays.hasOwnProperty("minute")) {
+                delay = Math.ceil(60/delays["minute"]) * multiplier;
+            }
+        }
+        return delay;
+    }
+
+    /*BOOL*/
+    static non_null(a) {
+        return a !== undefined && a !== 'undefined' && a !== null && a !== false;
+    }
+
+    /*STRINGS*/
+    static stou(str) {return str.replaceAll(' ', '_')}
+    static utos(str) {return str.replaceAll('_', ' ')}
+    static utotc(str){
+        console.log(str);
+        let words = Pro.utos(str);
+        console.log(words);
+        return Pro.toTitles(words);
+    }
+    static toTitles(s){
+        return s.replace(/\w\S*/g, (t) => t.charAt(0).toUpperCase() + t.substr(1).toLowerCase());
+    }
+    static format_url(url_str, params) {
+        for (let i = 0; i < params.length; i++) {
+            url_str = url_str.replace("%X", params[i]);
+        }
+        return url_str;
+    }
+
+
+    static generate_worker(file, workData, error = null) {
+        const port = new Worker(file, workData);
+        if (error !== null) {
+            // Set port events if applicable
+            port.on("error", (e) => console.error(e));
+        }
+        return port;
+    }
+
+    /*Command Line forms*/
+    static choosable_list(choices, question='What choice do you pick?') {
+        let temp_arr = [];
+        for (let [key, value] of Object.entries(choices)) {
+            console.log(`[${key}]: ${value}`);
+            temp_arr.push(value);
+        }
+        let answer = null;
+        while (answer === null) {
+            let response = readline.question(question);
+            if (response <= temp_arr.length - 1) {
+                answer = temp_arr[response];
+            } else {
+                console.log('Choice is not available');
+            }
+        }
+        return answer;
+    }
+
+
+
+
+
+
+}
+
+
+function get_proxies() {
+    let proxies = [];
+
+    let proxy_data = fs.readFileSync(asset('proxies.txt'),{encoding:'utf8'});
+    proxy_data = proxy_data.toString().split("\n");
+    for (let proxy_row in proxy_data) {
+        let proxy = proxy_data[proxy_row].replace('\r', '').split(':')
+        let proxy_info= {
+            'proxy_server': proxy[0]+':'+proxy[1],
+            'user_pass': proxy[2]+":"+proxy[3],
+            'ip': proxy[0],
+            'port': proxy[1],
+            'username': proxy[2],
+            'password': proxy[3],
+        };
+        proxy_info['proxy'] = proxy_info['user_pass']+'@'+proxy_info['proxy_server'];
+        // deb.high(proxy_info);
+        proxies.push(proxy_info);
+    }
+
+    return proxies;
+    // deb.high(`Init proxy list: ${proxies}`);
+}
+
+
+class Discorder {
+    constructor(hook_url) {
+        this.Hook = new webhook.Webhook(hook_url);
+    }
+
+    discordup(url, productName, productUrl, description=null, image=null, tn=null) {
+        let msg = new webhook.MessageBuilder()
+            .setTitle(productName)
+            .setText(productUrl)
+            .setDescription(`[CLICK HERE TO ADD TO CART](${url})`);
+
+        if (description !== null) { msg.addField("Description: ", description); }
+        if (image !== null) {msg.setImage(image);}
+        if (tn !== null) {msg.setThumbnail(tn);}
+        msg.setFooter("Created by DnD network", "https://image.ibb.co/gq7xgT/blackyzylogo.png")
+        this.Hook.send(msg).then(()=> {console.log('Sent Webhook')});
+    }
+
+    discord_async(url, productName, productUrl, description=null, image=null, tn=null) {
+        return new Promise(resolve => {
+            this.discordup(url, productName, productUrl, description, image, tn)
+        })
+    }
+}
 
 class Form {
     static cl_boolean(q) {
@@ -54,6 +209,8 @@ function ask_for_date(type=1) {
     return new DateOf(year, month);
 
 }
+
+
 
 
 class Profile {
@@ -318,6 +475,8 @@ let profile_action_variables = {
 };
 
 module.exports = {
+    Pro,
+    Discorder,
     Address,
     Profile,
     profile_actions: profile_action_variables,
