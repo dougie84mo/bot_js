@@ -1,6 +1,6 @@
 const readline = require("readline-sync");
-const {BotApp, Pro} = require("./bot_thread");
-const {profile_keys, profile_actions} = require("./tech_boy")
+const {BotApp} = require("./bot_thread");
+// const {Pro, profile_keys, profile_actions} = require("./tech_boy");
 
 class BotTestApp {
     static test_app () {

@@ -1,19 +1,21 @@
 @import "~bootstrap/scss/bootstrap";
 
 #global-body-container {
-  padding-top: 50px;
+  padding-top: 30px;
 }
 
-$taupe: "#B38BGD";
+$taupe: #B38BGD;
 
-#col_taupe {
-  background-color: $taupe;
-}
 
 @media (prefers-color-scheme: dark) {
-  body { background: #333; color: white; }
+  body { background-color: #333; }
 }
 
-@media (prefers-color-scheme: light) {
-  body { background: #ddd; color: black; }
+
+//@media (prefers-color-scheme: light) {
+//  body { background: #ddd; color: black; }
+//}
+
+.col_taupe {
+  background-color: $taupe;
 }

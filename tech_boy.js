@@ -1,6 +1,6 @@
 // const {env, deb, environments} = require('./bot_thread');
 
-// const {deb} = require('./lib/config');
+const {env, deb} = require('./lib/config');
 const fs = require('fs');
 // const axios = require('axios');
 // const path = require('path');

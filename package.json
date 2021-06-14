@@ -2,6 +2,7 @@
   "name": "bot_js",
   "version": "1.0.0",
   "description": "Node project for boting specialty items and monitors",
+  "proxy": "http://localhost:5000",
   "main": "odin.js",
   "bin": {
     "task": "task.bat"
@@ -32,6 +33,7 @@
     "axios": "^0.21.1",
     "cheerio": "^1.0.0-rc.5",
     "electron": "^12.0.2",
+    "express": "^4.17.1",
     "jquery": "^3.6.0",
     "node-random-name": "^1.0.1",
     "popper.js": "^1.16.1",
@@ -58,6 +60,7 @@
     "css-loader": "^5.2.6",
     "dotenv": "^9.0.0",
     "electron-reload": "^1.5.0",
+    "prop-types": "^15.7.2",
     "puppeteer-extra-plugin-stealth": "^2.7.6",
     "react-bootstrap": "^1.6.1",
     "sass": "^1.34.1",

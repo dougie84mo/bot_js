@@ -1,11 +1,8 @@
 import React from "react"
-import Header from "./components/Header"
 import "./components/_global.scss"
-import {Col, Container, Nav, Row, Tab, Button} from "react-bootstrap";
-import {forEach} from "react-bootstrap/ElementChildren";
-import { command_task_list } from "../lib/command";
+import {Col, Container, Nav, Row, Tab} from "react-bootstrap";
+import {command_task_list} from "../lib/command";
 // import { Pro } from "../tech_boy";
-
 import Dash from "./pages/Dash";
 import Monitors from "./pages/Monitors";
 
@@ -14,19 +11,18 @@ const App = () => {
 
     const pages = {
         dash: <Dash/>,
-        monitor: <Monitors/>,
-
+        monitors: <Monitors/>,
     }
 
-    const tab_pane = (key, page) => (
+    const tab_pane = (key, page, active=false) => (
         <Tab.Pane eventKey={key}>
-            <div className="nav">
+            <div className="nav d-block">
                 {page}
             </div>
         </Tab.Pane>
     )
 
-    const nav_link = (key) => (
+    const nav_link = (key, active=false) => (
         <Nav.Item>
             <Nav.Link eventKey={key.toLowerCase()}>{key}</Nav.Link>
         </Nav.Item>
@@ -34,12 +30,13 @@ const App = () => {
 
     return (
         <Container fluid id="global-body-container">
-            <Tab.Container id="left-tabs-example" defaultActiveKey="first">
+            <Tab.Container id="global-tab-container" defaultActiveKey="monitors">
               <Row>
                 <Col sm={2}>
-                  <Nav variant="pills" className="flex-column">
+                  <Nav fill variant="pills" className="flex-column">
                       {
-                          command_task_list.map((item) => {
+                          command_task_list.map((item, id) => {
+                              console.log(id);
                               return nav_link(item);
                           })
                       }
@@ -48,21 +45,10 @@ const App = () => {
                 <Col sm={10}>
                   <Tab.Content>
                       {
-                          command_task_list.map(() => {
-                              
+                          command_task_list.map((key) => {
+                              return tab_pane(key, pages[key])
                           })
                       }
-                      <Tab.Pane eventKey="dash">
-                          <div className="nav">
-                              <Dash />
-                          </div>
-                      </Tab.Pane>
-                      <Tab.Pane eventKey="monitors">
-                          <div className="nav">
-                              <Monitors />
-                          </div>
-                      </Tab.Pane>
-
                   </Tab.Content>
                 </Col>
               </Row>
