@@ -1,9 +1,6 @@
 const { BrowserWindow, app, ipcMain, nativeTheme } = require('electron');
 const path = require('path');
-const { env, deb} = require('./lib/config');
-// const { Pro, BotApp} = require('./bot_thread');
-// const { BotTestApp } = require('./test');
-// const { command_task_list } = require('./lib/command');
+const { conf } = require('./lib/config');
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -27,7 +24,7 @@ function createWindow() {
         nativeTheme.themeSource = 'system'
     })
 }
-if (env.id === 0){
+if (conf.env.id === 0){
     require('electron-reload')(__dirname, {
         electron: path.join(__dirname, 'node_modules', '.bin', 'electron')
     });

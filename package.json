@@ -29,12 +29,19 @@
     "url": "https://github.com/dougie84mo/bot_js/issues"
   },
   "homepage": "https://github.com/dougie84mo/bot_js#readme",
+  "react-dotenv": {
+    "whitelist": [
+      "TEST_URL"
+    ]
+  },
   "dependencies": {
     "axios": "^0.21.1",
-    "cheerio": "^1.0.0-rc.5",
+    "cheerio": "^1.0.0-rc.10",
+    "dotenv-webpack": "^7.0.3",
     "electron": "^12.0.2",
     "express": "^4.17.1",
     "jquery": "^3.6.0",
+    "mongodb": "^3.6.9",
     "node-random-name": "^1.0.1",
     "popper.js": "^1.16.1",
     "prompt-sync": "^4.2.0",
@@ -43,6 +50,7 @@
     "puppeteer-proxy": "^2.1.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-dotenv": "^0.1.3",
     "react-icons": "^4.2.0",
     "react-router-dom": "^5.2.0",
     "readline": "^1.3.0",
@@ -57,9 +65,11 @@
     "@babel/preset-react": "^7.13.13",
     "babel-loader": "^8.2.2",
     "bootstrap": "^4.6.0",
+    "cors": "^2.8.5",
     "css-loader": "^5.2.6",
     "dotenv": "^9.0.0",
     "electron-reload": "^1.5.0",
+    "jsonwebtoken": "^8.5.1",
     "prop-types": "^15.7.2",
     "puppeteer-extra-plugin-stealth": "^2.7.6",
     "react-bootstrap": "^1.6.1",

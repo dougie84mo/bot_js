@@ -1,5 +1,7 @@
 const path = require('path');
-const {DefinePlugin} = require('webpack');
+const {conf} = require('./lib/config')
+const {EnvironmentPlugin} = require('webpack');
+const Dotenv = require('dotenv-webpack')
 
 module.exports = {
     mode: 'development',
@@ -44,4 +46,12 @@ module.exports = {
         filename: 'app.js',
         path: path.resolve(__dirname, 'build', 'js'),
     },
+    plugins: [
+        // new EnvironmentPlugin({
+        //     REACT_APP_TEST_URL: process.env.REACT_APP_TEST_URL
+        // }),
+        new Dotenv({
+            safe: false,
+        })
+    ]
 };
