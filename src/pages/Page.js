@@ -2,7 +2,7 @@ import React from "react";
 import {Button, Card, Col, Row} from "react-bootstrap";
 import PropTypes from "prop-types";
 
-const Page = ({title, body, titleContent}) => {
+const Page = ({title, titleContent}) => {
     let titleButtons
     if (titleContent !== undefined && titleContent !== null) {
         titleButtons = () => (
@@ -15,15 +15,12 @@ const Page = ({title, body, titleContent}) => {
     }
 
     return (
-        <>
             <Row>
                 <Col sm={6}>
                     <h2 className="text-white-50">{title}</h2>
                 </Col>
                 {titleButtons === null ? '' : titleButtons}
             </Row>
-            {body}
-        </>
     )
 }
 

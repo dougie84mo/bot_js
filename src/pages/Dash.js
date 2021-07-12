@@ -31,11 +31,14 @@ class Dash extends React.Component {
         )
 
         return (
-            <Page title="Dash" titleContent="" body={dashes()} />
+            <div>
+                <Page title="Dash" titleContent="" />
+                {dashes()}
+            </div>
         )
     }
 
-};
+}
 
 
 

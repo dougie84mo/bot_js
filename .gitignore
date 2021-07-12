@@ -5,3 +5,5 @@ assets/**
 private/
 node_modules/
 .env
+lib/admin.js
+
